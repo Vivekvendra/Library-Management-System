@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   BookOpen,
   Users,
@@ -172,6 +173,7 @@ function UtilizationDonutChart({ available, issued, overdue, total }) {
 }
 
 export default function DashboardPage() {
+  const navigate = useNavigate();
   const { user, logout } = useAuth();
   const {
     books,
@@ -309,7 +311,11 @@ export default function DashboardPage() {
                   key={item.id}
                   type="button"
                   onClick={() => {
-                    setActiveSection(item.id);
+                    if (item.id === 'catalog') {
+                      navigate('/books');
+                    } else {
+                      setActiveSection(item.id);
+                    }
                     setSidebarOpen(false);
                   }}
                   className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[12.5px] font-medium transition cursor-pointer ${
@@ -678,7 +684,7 @@ export default function DashboardPage() {
 
             {/* Card 4: Books Available */}
             <div
-              onClick={() => setActiveSection('catalog')}
+              onClick={() => navigate('/books')}
               className="bg-[#FDFBF9] border border-[#ECE3D8] rounded-2xl p-4 shadow-2xs hover:shadow-md transition cursor-pointer"
             >
               <div className="flex items-start gap-3">

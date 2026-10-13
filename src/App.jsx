@@ -6,6 +6,8 @@ import { LibraryProvider } from './context/LibraryContext';
 import { ProtectedRoute, PublicRoute } from './components/auth/ProtectedRoute';
 import AuthPage from './pages/AuthPage';
 import DashboardPage from './pages/DashboardPage';
+import BookManagementPage from './pages/BookManagementPage';
+import BookDetailsPage from './pages/BookDetailsPage';
 
 export default function App() {
   return (
@@ -45,6 +47,24 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <DashboardPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Module 3: Protected Book Management & Book Details Routes */}
+            <Route
+              path="/books"
+              element={
+                <ProtectedRoute>
+                  <BookManagementPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/books/:id"
+              element={
+                <ProtectedRoute>
+                  <BookDetailsPage />
                 </ProtectedRoute>
               }
             />

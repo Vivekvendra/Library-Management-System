@@ -1061,6 +1061,99 @@ export function LibraryProvider({ children }) {
     return { success: true };
   };
 
+  const editBook = (updatedData) => {
+    const { id, title, author, isbn, publisher, category, publishedYear, totalCopies, coverImage, description } = updatedData;
+    const existing = books.find((b) => b.id === id);
+    if (!existing) {
+      toast.error('Book record not found.');
+      return { success: false };
+    }
+
+    const newTotal = Math.max(1, Number(totalCopies) || existing.totalCopies);
+    const issuedCount = Math.max(0, existing.totalCopies - existing.availableCopies);
+    const newAvailable = Math.max(0, newTotal - issuedCount);
+
+    const updatedBook = {
+      ...existing,
+      title: (title || existing.title).trim(),
+      author: (author || existing.author).trim(),
+      isbn: (isbn || existing.isbn).trim(),
+      publisher: (publisher || existing.publisher).trim(),
+      category: (category || existing.category).trim(),
+      publishedYear: Number(publishedYear) || existing.publishedYear,
+      totalCopies: newTotal,
+      availableCopies: newAvailable,
+      coverImage: coverImage || existing.coverImage,
+      description: (description || existing.description).trim(),
+    };
+
+    setBooks((prev) => prev.map((b) => (b.id === id ? updatedBook : b)));
+
+    if (!categories.includes(updatedBook.category)) {
+      setCategories((prev) => [...prev, updatedBook.category]);
+    }
+
+    // Also update any active issue titles if title changed
+    setIssues((prev) =>
+      prev.map((i) =>
+        i.bookId === id
+          ? {
+              ...i,
+              bookTitle: updatedBook.title,
+              bookCategory: updatedBook.category,
+              bookCover: updatedBook.coverImage,
+            }
+          : i
+      )
+    );
+
+    pushActivity({
+      type: 'book_added',
+      title: `Book updated: "${updatedBook.title}"`,
+      description: `Updated catalog record for "${updatedBook.title}" by ${updatedBook.author}`,
+    });
+
+    toast.success(`Updated "${updatedBook.title}" in catalog!`);
+    return { success: true, book: updatedBook };
+  };
+
+  const deleteBook = (bookId) => {
+    const target = books.find((b) => b.id === bookId);
+    if (!target) {
+      toast.error('Book not found.');
+      return { success: false };
+    }
+
+    // Check if copies are currently checked out
+    const activeCheckedOut = issues.filter(
+      (i) => i.bookId === bookId && i.status !== 'Returned'
+    );
+    if (activeCheckedOut.length > 0) {
+      toast.warning(
+        `Cannot delete "${target.title}" because ${activeCheckedOut.length} copy is currently issued to members.`
+      );
+      return { success: false, hasActiveIssues: true };
+    }
+
+    setBooks((prev) => prev.filter((b) => b.id !== bookId));
+
+    pushActivity({
+      type: 'book_added',
+      title: `Book removed from catalog: "${target.title}"`,
+      description: `Removed "${target.title}" from catalog inventory`,
+    });
+
+    toast.info(`Deleted "${target.title}" from catalog.`);
+    return { success: true };
+  };
+
+  const getBookById = useCallback(
+    (bookId) => {
+      return books.find((b) => b.id === bookId) || null;
+    },
+    [books]
+  );
+
   return (
     <LibraryContext.Provider
       value={{
@@ -1080,6 +1173,9 @@ export function LibraryProvider({ children }) {
         sendOverdueReminder,
         collectFineForIssue,
         addQuickBook,
+        editBook,
+        deleteBook,
+        getBookById,
         addQuickMember,
         addQuickCategory,
         syncWithApi: () => fetchAndHydrateFromApi(true),
