@@ -1154,6 +1154,180 @@ export function LibraryProvider({ children }) {
     [books]
   );
 
+  const addMember = ({
+    fullName,
+    email,
+    phone,
+    address,
+    membershipId,
+    membershipDate,
+    status = 'Active',
+  }) => {
+    const nextNum = members.length + 1;
+    const cleanId = (
+      membershipId || `LBX-2026-${String(nextNum).padStart(3, '0')}`
+    ).trim();
+
+    const duplicate = members.find(
+      (m) =>
+        m.membershipId.toLowerCase() === cleanId.toLowerCase() ||
+        m.email.toLowerCase() === email.trim().toLowerCase()
+    );
+    if (duplicate) {
+      if (duplicate.membershipId.toLowerCase() === cleanId.toLowerCase()) {
+        toast.error(`Membership ID "${cleanId}" is already taken.`);
+      } else {
+        toast.error(`A member with email "${email.trim()}" already exists.`);
+      }
+      return { success: false };
+    }
+
+    const newMember = {
+      id: `mem-${Date.now()}`,
+      fullName: fullName.trim(),
+      email: email.trim(),
+      phone: (phone || '').trim(),
+      address: (address || 'Central Reading District').trim(),
+      membershipId: cleanId,
+      membershipDate:
+        membershipDate || new Date().toISOString().split('T')[0],
+      status: status || 'Active',
+    };
+
+    setMembers((prev) => [newMember, ...prev]);
+
+    pushActivity({
+      type: 'member_added',
+      title: `New member registered: ${newMember.fullName} (${newMember.membershipId})`,
+      description: `New member registered: ${newMember.fullName}`,
+    });
+
+    toast.success(`Registered member ${newMember.fullName} (${cleanId})!`);
+    return { success: true, member: newMember };
+  };
+
+  const editMember = ({
+    id,
+    fullName,
+    email,
+    phone,
+    address,
+    membershipId,
+    membershipDate,
+    status,
+  }) => {
+    const existing = members.find((m) => m.id === id);
+    if (!existing) {
+      toast.error('Member record not found.');
+      return { success: false };
+    }
+
+    const cleanId = (membershipId || existing.membershipId).trim();
+    const cleanEmail = (email || existing.email).trim();
+
+    const duplicate = members.find(
+      (m) =>
+        m.id !== id &&
+        (m.membershipId.toLowerCase() === cleanId.toLowerCase() ||
+          m.email.toLowerCase() === cleanEmail.toLowerCase())
+    );
+    if (duplicate) {
+      toast.error('Another member already has this Membership ID or Email.');
+      return { success: false };
+    }
+
+    const updated = {
+      ...existing,
+      fullName: (fullName || existing.fullName).trim(),
+      email: cleanEmail,
+      phone: (phone !== undefined ? phone : existing.phone).trim(),
+      address: (address !== undefined ? address : existing.address).trim(),
+      membershipId: cleanId,
+      membershipDate: membershipDate || existing.membershipDate,
+      status: status || existing.status || 'Active',
+    };
+
+    setMembers((prev) => prev.map((m) => (m.id === id ? updated : m)));
+
+    setIssues((prev) =>
+      prev.map((i) =>
+        i.memberId === id
+          ? {
+              ...i,
+              memberName: updated.fullName,
+              membershipId: updated.membershipId,
+            }
+          : i
+      )
+    );
+
+    pushActivity({
+      type: 'member_added',
+      title: `Member updated: ${updated.fullName} (${updated.membershipId})`,
+      description: `Updated membership file for ${updated.fullName}`,
+    });
+
+    toast.success(`Updated ${updated.fullName}'s profile!`);
+    return { success: true, member: updated };
+  };
+
+  const deleteMember = (memberId) => {
+    const target = members.find((m) => m.id === memberId);
+    if (!target) {
+      toast.error('Member record not found.');
+      return { success: false };
+    }
+
+    const activeLoans = issues.filter(
+      (i) => i.memberId === memberId && i.status !== 'Returned'
+    );
+    if (activeLoans.length > 0) {
+      toast.warning(
+        `Cannot delete ${target.fullName} because they have ${activeLoans.length} active unreturned book(s).`
+      );
+      return { success: false, hasActiveLoans: true, count: activeLoans.length };
+    }
+
+    setMembers((prev) => prev.filter((m) => m.id !== memberId));
+
+    pushActivity({
+      type: 'member_added',
+      title: `Member removed: ${target.fullName} (${target.membershipId})`,
+      description: `Removed member registration for ${target.fullName}`,
+    });
+
+    toast.info(`Removed member ${target.fullName} from directory.`);
+    return { success: true };
+  };
+
+  const getMemberById = useCallback(
+    (memberId) => {
+      const member = members.find((m) => m.id === memberId);
+      if (!member) return null;
+      const memberIssues = enrichedIssues.filter((i) => i.memberId === memberId);
+      const activeLoans = memberIssues.filter((i) => i.status !== 'Returned');
+      const returnedHistory = memberIssues.filter((i) => i.status === 'Returned');
+      const totalFinesPaid = collectedFineHistory
+        .filter((f) => f.memberName === member.fullName)
+        .reduce((sum, f) => sum + Number(f.amount || 0), 0);
+      const pendingFines = activeLoans.reduce(
+        (sum, i) => sum + Number(i.calculatedFine || 0),
+        0
+      );
+
+      return {
+        ...member,
+        activeLoans,
+        returnedHistory,
+        allIssues: memberIssues,
+        totalBorrowed: memberIssues.length,
+        totalFinesPaid,
+        pendingFines,
+      };
+    },
+    [members, enrichedIssues, collectedFineHistory]
+  );
+
   return (
     <LibraryContext.Provider
       value={{
@@ -1177,6 +1351,10 @@ export function LibraryProvider({ children }) {
         deleteBook,
         getBookById,
         addQuickMember,
+        addMember,
+        editMember,
+        deleteMember,
+        getMemberById,
         addQuickCategory,
         syncWithApi: () => fetchAndHydrateFromApi(true),
       }}

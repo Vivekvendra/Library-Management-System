@@ -8,6 +8,8 @@ import AuthPage from './pages/AuthPage';
 import DashboardPage from './pages/DashboardPage';
 import BookManagementPage from './pages/BookManagementPage';
 import BookDetailsPage from './pages/BookDetailsPage';
+import MemberManagementPage from './pages/MemberManagementPage';
+import MemberProfilePage from './pages/MemberProfilePage';
 
 export default function App() {
   return (
@@ -65,6 +67,24 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <BookDetailsPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Module 4: Protected Member Management & Member Profile Routes */}
+            <Route
+              path="/members"
+              element={
+                <ProtectedRoute>
+                  <MemberManagementPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/members/:id"
+              element={
+                <ProtectedRoute>
+                  <MemberProfilePage />
                 </ProtectedRoute>
               }
             />

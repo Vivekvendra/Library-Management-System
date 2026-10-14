@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import {
   BookOpen,
   Users,
@@ -14,7 +14,6 @@ import {
   LogOut,
   Search,
   Menu,
-  LayoutGrid,
   Bell,
   ChevronDown,
   BarChart3,
@@ -26,7 +25,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useLibrary, formatDisplayDate } from '../context/LibraryContext';
-import { LibraXLogo } from '../components/common/LibraXLogo';
+import Sidebar from '../components/common/Sidebar';
 import QuickActionModals from '../components/dashboard/QuickActionModals';
 
 function formatRelativeTime(isoString) {
@@ -176,7 +175,6 @@ export default function DashboardPage() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const {
-    books,
     issues,
     activities,
     weeklyCirculation,
@@ -190,7 +188,6 @@ export default function DashboardPage() {
   } = useLibrary();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState('overview');
   const [activeModal, setActiveModal] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [circulationRange, setCirculationRange] = useState('This Week');
@@ -248,180 +245,8 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-[#F6EFE6] text-[#1D1611] font-sans flex">
-      {/* Mobile Sidebar Backdrop */}
-      {sidebarOpen && (
-        <div
-          onClick={() => setSidebarOpen(false)}
-          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-xs lg:hidden"
-        />
-      )}
-
-      {/* STICKY LEFT SIDEBAR (Proportioned for 100% zoom) */}
-      <aside
-        className={`fixed lg:sticky lg:top-0 inset-y-0 left-0 z-50 w-56 h-screen bg-[#221209] text-[#F5EBE1] flex flex-col justify-between shrink-0 select-none transition-transform duration-300 ease-in-out overflow-y-auto ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-        }`}
-      >
-        {/* Top Logo + Nav */}
-        <div className="relative z-10">
-          {/* Brand Header */}
-          <div className="px-4 py-4 flex items-center justify-between">
-            <LibraXLogo size="sm" lightText />
-            <button
-              type="button"
-              onClick={() => setSidebarOpen(false)}
-              className="text-[#B89F88] hover:text-white p-1 cursor-pointer"
-              title="Toggle menu"
-            >
-              <Menu className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Primary Navigation Items */}
-          <nav className="px-3 pt-1 space-y-1">
-            {[
-              {
-                id: 'overview',
-                label: 'Dashboard Overview',
-                icon: LayoutGrid,
-              },
-              {
-                id: 'circulation',
-                label: 'Active Issues & Overdue',
-                icon: BookUp,
-                badge: metrics.booksIssued,
-              },
-              {
-                id: 'catalog',
-                label: 'Live Catalog & Genres',
-                icon: BookOpen,
-                badge: metrics.uniqueTitles,
-              },
-              {
-                id: 'activities',
-                label: 'Recent Activity Feed',
-                icon: Clock,
-                badge: activities.length,
-              },
-            ].map((item) => {
-              const Icon = item.icon;
-              const isActive = activeSection === item.id;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => {
-                    if (item.id === 'catalog') {
-                      navigate('/books');
-                    } else {
-                      setActiveSection(item.id);
-                    }
-                    setSidebarOpen(false);
-                  }}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[12.5px] font-medium transition cursor-pointer ${
-                    isActive
-                      ? 'bg-gradient-to-r from-[#8D5424] to-[#6E3F19] text-white shadow-sm'
-                      : 'text-[#D4C3B3] hover:bg-[#311C10] hover:text-white'
-                  }`}
-                >
-                  <span className="flex items-center gap-2.5 truncate">
-                    <Icon className="w-4 h-4 shrink-0" />
-                    <span className="truncate">{item.label}</span>
-                  </span>
-                  {item.badge !== undefined && (
-                    <span
-                      className={`text-[10.5px] min-w-[22px] h-4.5 px-1.5 rounded-full font-semibold flex items-center justify-center shrink-0 ${
-                        isActive
-                          ? 'bg-white/20 text-white'
-                          : 'bg-[#382214] text-[#D4C3B3]'
-                      }`}
-                    >
-                      {item.badge}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-
-            {/* QUICK ACTIONS SECTION IN SIDEBAR */}
-            <div className="pt-4 pb-1">
-              <p className="px-3 text-[10px] font-semibold uppercase tracking-wider text-[#9A826C] mb-1.5">
-                QUICK ACTIONS
-              </p>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveModal('issue');
-                  setSidebarOpen(false);
-                }}
-                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[12.5px] font-normal text-[#DFD0C1] hover:bg-[#311C10] hover:text-white transition cursor-pointer"
-              >
-                <BookUp className="w-3.5 h-3.5 text-[#E57338] shrink-0" />
-                <span className="truncate">Quick Issue Book</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveModal('return');
-                  setSidebarOpen(false);
-                }}
-                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[12.5px] font-normal text-[#DFD0C1] hover:bg-[#311C10] hover:text-white transition cursor-pointer"
-              >
-                <RotateCcw className="w-3.5 h-3.5 text-[#25A567] shrink-0" />
-                <span className="truncate">Quick Return Book</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveModal('addBook');
-                  setSidebarOpen(false);
-                }}
-                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[12.5px] font-normal text-[#DFD0C1] hover:bg-[#311C10] hover:text-white transition cursor-pointer"
-              >
-                <Plus className="w-3.5 h-3.5 text-[#EAB308] border border-[#EAB308] rounded-full p-0.5 shrink-0" />
-                <span className="truncate">Add New Catalog Book</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveModal('addMember');
-                  setSidebarOpen(false);
-                }}
-                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[12.5px] font-normal text-[#DFD0C1] hover:bg-[#311C10] hover:text-white transition cursor-pointer"
-              >
-                <UserPlus className="w-3.5 h-3.5 text-[#3898FF] shrink-0" />
-                <span className="truncate">Enroll New Member</span>
-              </button>
-            </div>
-          </nav>
-        </div>
-
-        {/* Bottom Vintage Stacked Books Image + Logout Action */}
-        <div className="relative mt-auto pt-3">
-          <div className="relative h-40 w-full overflow-hidden">
-            <img
-              src="/library-bg.png"
-              alt="Library Heritage Books"
-              className="w-full h-full object-cover object-left-bottom brightness-90 contrast-105"
-            />
-            <div className="absolute inset-0 bg-gradient-to-b from-[#221209] via-[#221209]/30 to-black/70" />
-            <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between">
-              <button
-                type="button"
-                onClick={logout}
-                className="w-full flex items-center justify-center gap-1.5 bg-black/55 hover:bg-red-900/80 backdrop-blur-xs text-[#F5EBE1] text-[11px] font-medium py-1.5 px-2.5 rounded-lg border border-white/15 transition cursor-pointer"
-              >
-                <LogOut className="w-3 h-3" />
-                <span>Sign Out ({user?.username || 'Librarian'})</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </aside>
+      {/* SHARED STICKY SIDEBAR */}
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* MAIN CONTENT AREA */}
       <div className="flex-1 flex flex-col min-w-0">
@@ -645,9 +470,13 @@ export default function DashboardPage() {
               </div>
               <div className="mt-3 pt-2 border-t border-[#F4EDE4] flex items-center justify-between text-[11px]">
                 <span className="text-[#7A6E65]">Active registrations</span>
-                <span className="font-semibold text-[#764922] inline-flex items-center gap-0.5">
-                  + Enroll Member <ArrowRight className="w-3 h-3" />
-                </span>
+                <Link
+                  to="/members"
+                  onClick={(e) => e.stopPropagation()}
+                  className="font-semibold text-[#764922] inline-flex items-center gap-0.5 hover:underline"
+                >
+                  View Directory <ArrowRight className="w-3 h-3" />
+                </Link>
               </div>
             </div>
 
@@ -932,9 +761,8 @@ export default function DashboardPage() {
           </section>
 
           {/* ROW 3: RECENT TRANSACTIONS & OVERDUE BOOKS */}
-          {(activeSection === 'overview' || activeSection === 'circulation') && (
-            <section className="grid grid-cols-1 lg:grid-cols-12 gap-3.5">
-              {/* Left 7 Cols: Recent Transactions Table */}
+          <section id="circulation" className="grid grid-cols-1 lg:grid-cols-12 gap-3.5">
+            {/* Left 7 Cols: Recent Transactions Table */}
               <div className="lg:col-span-7 bg-[#FDFBF9] border border-[#ECE3D8] rounded-2xl p-4 shadow-2xs">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
@@ -1142,67 +970,6 @@ export default function DashboardPage() {
                 </div>
               </div>
             </section>
-          )}
-
-          {/* OPTIONAL CATALOG VIEW WHEN "Live Catalog & Genres" CLICKED IN SIDEBAR */}
-          {activeSection === 'catalog' && (
-            <section className="bg-[#FDFBF9] border border-[#ECE3D8] rounded-2xl p-4 shadow-2xs">
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <h2 className="text-sm font-bold text-[#1D1611]">
-                    Live Catalog & Genres ({books.length} Unique Titles • {metrics.totalBooks} Total Copies)
-                  </h2>
-                  <p className="text-[11px] text-[#6E6259]">
-                    Click any book below to issue a copy to a library member
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setActiveModal('addBook')}
-                  className="bg-[#764922] hover:bg-[#5E391A] text-white text-xs font-semibold px-3 py-1.5 rounded-xl cursor-pointer"
-                >
-                  + Add New Book
-                </button>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                {books.map((b) => (
-                  <div
-                    key={b.id}
-                    className="bg-white border border-[#EAE0D5] rounded-xl p-3 flex items-center justify-between gap-2.5"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <img
-                        src={b.coverImage}
-                        alt={b.title}
-                        className="w-9 h-12 object-cover rounded shadow-2xs shrink-0"
-                      />
-                      <div className="min-w-0">
-                        <span className="text-[9.5px] font-semibold bg-[#F3E5D7] text-[#7D4E24] px-2 py-0.5 rounded-full">
-                          {b.category}
-                        </span>
-                        <p className="text-xs font-bold text-[#1D1611] truncate mt-0.5">
-                          {b.title}
-                        </p>
-                        <p className="text-[10.5px] text-[#6E6259] truncate">
-                          {b.author}
-                        </p>
-                        <p className="text-[10.5px] font-semibold text-emerald-700">
-                          {b.availableCopies}/{b.totalCopies} available
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setActiveModal('issue')}
-                      className="text-[11px] font-semibold text-[#764922] hover:underline shrink-0 cursor-pointer"
-                    >
-                      Issue
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
 
           {/* ROW 4: QUICK ACTIONS (4 Pastel Cards) & LATEST ACTIVITY FEED */}
           <section className="grid grid-cols-1 lg:grid-cols-12 gap-3.5">
@@ -1287,7 +1054,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Right 5 Cols: Latest Activity Feed */}
-            <div className="lg:col-span-5 bg-[#FDFBF9] border border-[#ECE3D8] rounded-2xl p-4 shadow-2xs flex flex-col justify-between">
+            <div id="activities" className="lg:col-span-5 bg-[#FDFBF9] border border-[#ECE3D8] rounded-2xl p-4 shadow-2xs flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
