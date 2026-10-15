@@ -10,6 +10,7 @@ import BookManagementPage from './pages/BookManagementPage';
 import BookDetailsPage from './pages/BookDetailsPage';
 import MemberManagementPage from './pages/MemberManagementPage';
 import MemberProfilePage from './pages/MemberProfilePage';
+import CirculationPage from './pages/CirculationPage';
 
 export default function App() {
   return (
@@ -85,6 +86,16 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <MemberProfilePage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Module 5: Protected Circulation & Issue/Return Route */}
+            <Route
+              path="/circulation"
+              element={
+                <ProtectedRoute>
+                  <CirculationPage />
                 </ProtectedRoute>
               }
             />

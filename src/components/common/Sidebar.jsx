@@ -52,10 +52,10 @@ export default function Sidebar({ isOpen, onClose }) {
     {
       id: 'circulation',
       label: 'Circulation & Issues',
-      path: '/dashboard#circulation',
+      path: '/circulation',
       icon: BookUp,
       badge: metrics?.booksIssued || 0,
-      isActive: location.pathname === '/dashboard' && location.hash === '#circulation',
+      isActive: location.pathname.startsWith('/circulation'),
     },
     {
       id: 'activities',

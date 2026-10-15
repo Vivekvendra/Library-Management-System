@@ -770,7 +770,7 @@ export function LibraryProvider({ children }) {
     setActivities((prev) => [newAct, ...prev]);
   };
 
-  const issueBook = ({ bookId, memberId, dueDate }) => {
+  const issueBook = ({ bookId, memberId, issueDate, dueDate }) => {
     const targetBook = books.find((b) => b.id === bookId);
     const targetMember = members.find((m) => m.id === memberId);
 
@@ -794,10 +794,14 @@ export function LibraryProvider({ children }) {
       toast.warning(
         `${targetMember.fullName} already has an active copy of "${targetBook.title}" issued.`
       );
-      return { success: false };
+      return { success: false, duplicate: true };
     }
 
-    const isOverdueNow = calculateOverdueDays(dueDate) > 0;
+    const todayIso = new Date().toISOString().split('T')[0];
+    const finalIssueDate = issueDate || todayIso;
+    const finalDueDate = dueDate || getDaysOffsetIso(14);
+    const isOverdueNow = calculateOverdueDays(finalDueDate) > 0;
+
     const newIssue = {
       id: `iss-${Date.now()}`,
       bookId: targetBook.id,
@@ -807,8 +811,8 @@ export function LibraryProvider({ children }) {
       memberId: targetMember.id,
       memberName: targetMember.fullName,
       membershipId: targetMember.membershipId,
-      issueDate: new Date().toISOString().split('T')[0],
-      dueDate: dueDate || getDaysOffsetIso(14),
+      issueDate: finalIssueDate,
+      dueDate: finalDueDate,
       returnDate: null,
       transactionType: 'Issue',
       status: isOverdueNow ? 'Overdue' : 'Issued',
@@ -840,10 +844,10 @@ export function LibraryProvider({ children }) {
     });
 
     toast.success(`Issued "${targetBook.title}" to ${targetMember.fullName}!`);
-    return { success: true };
+    return { success: true, issue: newIssue };
   };
 
-  const returnBook = (issueId, collectOverdueFine = true) => {
+  const returnBook = (issueId, collectOverdueFine = true, customReturnDate = null) => {
     const targetIssue = enrichedIssues.find((i) => i.id === issueId);
     if (!targetIssue || targetIssue.status === 'Returned') {
       toast.error('This circulation record is already returned or invalid.');
@@ -852,6 +856,7 @@ export function LibraryProvider({ children }) {
 
     const fineAmount = targetIssue.calculatedFine || 0;
     const todayIso = new Date().toISOString().split('T')[0];
+    const effectiveReturnDate = customReturnDate || todayIso;
 
     setIssues((prev) =>
       prev.map((i) =>
@@ -860,7 +865,7 @@ export function LibraryProvider({ children }) {
               ...i,
               status: 'Returned',
               transactionType: 'Return',
-              returnDate: todayIso,
+              returnDate: effectiveReturnDate,
               finePaid: fineAmount > 0 ? collectOverdueFine : true,
               paidFineAmount: collectOverdueFine ? fineAmount : 0,
             }
@@ -893,7 +898,7 @@ export function LibraryProvider({ children }) {
         memberName: targetIssue.memberName,
         bookTitle: targetIssue.bookTitle,
         amount: fineAmount,
-        paidAt: todayIso,
+        paidAt: effectiveReturnDate,
       };
       setCollectedFineHistory((prev) => [fineEntry, ...prev]);
       pushActivity({
@@ -913,6 +918,57 @@ export function LibraryProvider({ children }) {
       toast.success(`Returned "${targetIssue.bookTitle}" to available inventory!`);
     }
 
+    return { success: true };
+  };
+
+  const renewBook = (issueId, extensionDays = 14) => {
+    const targetIssue = enrichedIssues.find((i) => i.id === issueId);
+    if (!targetIssue || targetIssue.status === 'Returned') {
+      toast.error('Cannot renew a returned loan.');
+      return { success: false };
+    }
+
+    const currentDue = new Date(targetIssue.dueDate || new Date());
+    currentDue.setDate(currentDue.getDate() + extensionDays);
+    const newDueDate = currentDue.toISOString().split('T')[0];
+    const isOverdueNow = calculateOverdueDays(newDueDate) > 0;
+
+    setIssues((prev) =>
+      prev.map((i) =>
+        i.id === issueId
+          ? {
+              ...i,
+              dueDate: newDueDate,
+              status: isOverdueNow ? 'Overdue' : 'Issued',
+            }
+          : i
+      )
+    );
+
+    pushActivity({
+      type: 'issue',
+      title: `Loan renewed: "${targetIssue.bookTitle}" for ${targetIssue.memberName} (New due: ${newDueDate})`,
+      description: `Loan extended for ${targetIssue.memberName}`,
+    });
+
+    toast.success(`Renewed loan for "${targetIssue.bookTitle}" until ${newDueDate}!`);
+    return { success: true, newDueDate };
+  };
+
+  const deleteIssueRecord = (issueId) => {
+    const targetIssue = issues.find((i) => i.id === issueId);
+    if (!targetIssue) {
+      toast.error('Circulation record not found.');
+      return { success: false };
+    }
+
+    if (targetIssue.status !== 'Returned') {
+      toast.warning('Cannot delete an active book loan. Return the book first.');
+      return { success: false };
+    }
+
+    setIssues((prev) => prev.filter((i) => i.id !== issueId));
+    toast.info('Archival circulation record deleted.');
     return { success: true };
   };
 
@@ -1344,6 +1400,8 @@ export function LibraryProvider({ children }) {
         lastSyncedAt,
         issueBook,
         returnBook,
+        renewBook,
+        deleteIssueRecord,
         sendOverdueReminder,
         collectFineForIssue,
         addQuickBook,

@@ -192,8 +192,8 @@ export default function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [circulationRange, setCirculationRange] = useState('This Week');
   const [selectedGenre, setSelectedGenre] = useState('All Genres');
-  const [showAllTransactions, setShowAllTransactions] = useState(false);
-  const [showAllOverdue, setShowAllOverdue] = useState(false);
+  const showAllTransactions = false;
+  const showAllOverdue = false;
   const [showAllActivities, setShowAllActivities] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
@@ -771,14 +771,12 @@ export default function DashboardPage() {
                       Recent Transactions
                     </h2>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowAllTransactions((prev) => !prev)}
+                  <Link
+                    to="/circulation"
                     className="text-[11.5px] font-semibold text-[#764922] hover:underline inline-flex items-center gap-1 cursor-pointer"
                   >
-                    {showAllTransactions ? 'Show Less' : 'View All'}{' '}
-                    <ArrowRight className="w-3 h-3" />
-                  </button>
+                    Manage Circulation <ArrowRight className="w-3 h-3" />
+                  </Link>
                 </div>
 
                 <div className="overflow-x-auto">
@@ -883,14 +881,12 @@ export default function DashboardPage() {
                       Overdue Books
                     </h2>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowAllOverdue((prev) => !prev)}
-                    className="text-[11.5px] font-semibold text-[#764922] hover:underline inline-flex items-center gap-1 cursor-pointer"
+                  <Link
+                    to="/circulation"
+                    className="text-[11.5px] font-semibold text-[#DC2626] hover:underline inline-flex items-center gap-1 cursor-pointer"
                   >
-                    {showAllOverdue ? 'Show Less' : 'View All'}{' '}
-                    <ArrowRight className="w-3 h-3" />
-                  </button>
+                    View All Overdue <ArrowRight className="w-3 h-3" />
+                  </Link>
                 </div>
 
                 <div className="overflow-x-auto">
