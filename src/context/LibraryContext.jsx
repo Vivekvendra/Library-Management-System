@@ -985,15 +985,24 @@ export function LibraryProvider({ children }) {
     );
   };
 
-  const collectFineForIssue = (issueId) => {
+  const payFine = ({
+    issueId,
+    amount,
+    paymentMethod = 'Cash',
+    notes = '',
+    receiptNumber = null,
+  }) => {
     const targetIssue = enrichedIssues.find((i) => i.id === issueId);
-    if (!targetIssue || targetIssue.calculatedFine <= 0) {
-      toast.info('No pending overdue fine on this record.');
+    if (!targetIssue) {
+      toast.error('Circulation record not found.');
       return { success: false };
     }
 
-    const amount = targetIssue.calculatedFine;
+    const fineAmount = amount !== undefined && !Number.isNaN(Number(amount))
+      ? Number(amount)
+      : targetIssue.calculatedFine || 0;
     const todayIso = new Date().toISOString().split('T')[0];
+    const rcpNo = receiptNumber || `RCP-${Date.now().toString().slice(-6)}`;
 
     setIssues((prev) =>
       prev.map((i) =>
@@ -1001,32 +1010,113 @@ export function LibraryProvider({ children }) {
           ? {
               ...i,
               finePaid: true,
-              status: 'Issued',
-              dueDate: getDaysOffsetIso(7),
+              paidFineAmount: fineAmount,
+              finePaymentDate: todayIso,
+              status: i.status === 'Overdue' ? 'Issued' : i.status,
             }
           : i
       )
     );
 
-    setCollectedFineHistory((prev) => [
-      {
-        id: `fn-${Date.now()}`,
-        memberName: targetIssue.memberName,
-        bookTitle: targetIssue.bookTitle,
-        amount,
-        paidAt: todayIso,
-      },
-      ...prev,
-    ]);
+    const record = {
+      id: `fn-${Date.now()}`,
+      receiptNumber: rcpNo,
+      issueId,
+      memberId: targetIssue.memberId,
+      memberName: targetIssue.memberName,
+      membershipId: targetIssue.membershipId,
+      bookId: targetIssue.bookId,
+      bookTitle: targetIssue.bookTitle,
+      bookCover: targetIssue.bookCover,
+      amount: fineAmount,
+      overdueDays: targetIssue.overdueDays || 0,
+      paymentMethod,
+      paymentStatus: 'Paid',
+      paidAt: todayIso,
+      notes: notes || 'Overdue fine settlement',
+    };
+
+    setCollectedFineHistory((prev) => [record, ...prev]);
 
     pushActivity({
       type: 'fine_paid',
-      title: `Overdue fine collected: $${amount.toFixed(2)} from ${targetIssue.memberName}`,
-      description: `Overdue fine collected: $${amount.toFixed(2)} from ${targetIssue.memberName}`,
+      title: `Fine payment received: $${fineAmount.toFixed(2)} (${paymentMethod}) from ${targetIssue.memberName}`,
+      description: `Fine payment received: $${fineAmount.toFixed(2)} from ${targetIssue.memberName}`,
     });
 
-    toast.success(`Collected $${amount.toFixed(2)} overdue fine from ${targetIssue.memberName}!`);
-    return { success: true };
+    toast.success(`Payment of $${fineAmount.toFixed(2)} processed for ${targetIssue.memberName}!`);
+    return { success: true, record };
+  };
+
+  const waiveFine = ({ issueId, reason = 'Administrative Grace' }) => {
+    const targetIssue = enrichedIssues.find((i) => i.id === issueId);
+    if (!targetIssue) {
+      toast.error('Circulation record not found.');
+      return { success: false };
+    }
+
+    const originalAmount = targetIssue.calculatedFine || 0;
+    const todayIso = new Date().toISOString().split('T')[0];
+    const rcpNo = `WAV-${Date.now().toString().slice(-6)}`;
+
+    setIssues((prev) =>
+      prev.map((i) =>
+        i.id === issueId
+          ? {
+              ...i,
+              finePaid: true,
+              waived: true,
+              paidFineAmount: 0,
+              finePaymentDate: todayIso,
+              status: i.status === 'Overdue' ? 'Issued' : i.status,
+            }
+          : i
+      )
+    );
+
+    const record = {
+      id: `fn-${Date.now()}`,
+      receiptNumber: rcpNo,
+      issueId,
+      memberId: targetIssue.memberId,
+      memberName: targetIssue.memberName,
+      membershipId: targetIssue.membershipId,
+      bookId: targetIssue.bookId,
+      bookTitle: targetIssue.bookTitle,
+      bookCover: targetIssue.bookCover,
+      amount: 0,
+      originalAmount,
+      overdueDays: targetIssue.overdueDays || 0,
+      paymentMethod: 'Waived',
+      paymentStatus: 'Waived',
+      paidAt: todayIso,
+      notes: reason || 'Administrative fee waiver',
+    };
+
+    setCollectedFineHistory((prev) => [record, ...prev]);
+
+    pushActivity({
+      type: 'fine_waived',
+      title: `Overdue fine waived: $${originalAmount.toFixed(2)} for ${targetIssue.memberName} (${reason})`,
+      description: `Overdue fine waived for ${targetIssue.memberName}`,
+    });
+
+    toast.info(`Waived fine for ${targetIssue.memberName} (${reason}).`);
+    return { success: true, record };
+  };
+
+  const collectFineForIssue = (issueId) => {
+    const targetIssue = enrichedIssues.find((i) => i.id === issueId);
+    if (!targetIssue || targetIssue.calculatedFine <= 0) {
+      toast.info('No pending overdue fine on this record.');
+      return { success: false };
+    }
+    return payFine({
+      issueId,
+      amount: targetIssue.calculatedFine,
+      paymentMethod: 'Cash',
+      notes: 'Quick desk collection',
+    });
   };
 
   const addQuickBook = ({
@@ -1100,9 +1190,12 @@ export function LibraryProvider({ children }) {
     return { success: true, member: newMember };
   };
 
-  const addQuickCategory = ({ name }) => {
+  const addCategory = ({ name }) => {
     const clean = (name || '').trim();
-    if (!clean) return { success: false };
+    if (!clean) {
+      toast.error('Category name cannot be empty.');
+      return { success: false };
+    }
     if (categories.some((c) => c.toLowerCase() === clean.toLowerCase())) {
       toast.warning(`Category "${clean}" already exists.`);
       return { success: false };
@@ -1110,10 +1203,92 @@ export function LibraryProvider({ children }) {
     setCategories((prev) => [...prev, clean]);
     pushActivity({
       type: 'category_added',
-      title: `New genre added: ${clean}`,
-      description: `New genre added: ${clean}`,
+      title: `New category created: ${clean}`,
+      description: `New category created: ${clean}`,
     });
-    toast.success(`Category "${clean}" added!`);
+    toast.success(`Category "${clean}" created successfully!`);
+    return { success: true, category: clean };
+  };
+
+  const addQuickCategory = ({ name }) => {
+    return addCategory({ name });
+  };
+
+  const editCategory = (oldName, { name }) => {
+    const clean = (name || '').trim();
+    if (!clean) {
+      toast.error('Category name cannot be empty.');
+      return { success: false };
+    }
+    if (
+      clean.toLowerCase() !== oldName.toLowerCase() &&
+      categories.some((c) => c.toLowerCase() === clean.toLowerCase())
+    ) {
+      toast.warning(`Category "${clean}" already exists.`);
+      return { success: false };
+    }
+
+    setCategories((prev) => prev.map((c) => (c === oldName ? clean : c)));
+
+    // Update all books in this category
+    setBooks((prev) =>
+      prev.map((b) => (b.category === oldName ? { ...b, category: clean } : b))
+    );
+
+    // Update all issues in this category
+    setIssues((prev) =>
+      prev.map((i) =>
+        i.bookCategory === oldName ? { ...i, bookCategory: clean } : i
+      )
+    );
+
+    pushActivity({
+      type: 'category_updated',
+      title: `Category renamed: "${oldName}" → "${clean}"`,
+      description: `Category renamed from "${oldName}" to "${clean}"`,
+    });
+    toast.success(`Category updated to "${clean}"!`);
+    return { success: true, category: clean };
+  };
+
+  const deleteCategory = (categoryName, fallbackCategory = 'Others') => {
+    if (categories.length <= 1) {
+      toast.warning('At least one library category must remain in system.');
+      return { success: false };
+    }
+
+    // Remove category
+    setCategories((prev) => prev.filter((c) => c !== categoryName));
+
+    // Reassign affected books to fallback
+    let affectedCount = 0;
+    setBooks((prev) =>
+      prev.map((b) => {
+        if (b.category === categoryName) {
+          affectedCount++;
+          return { ...b, category: fallbackCategory };
+        }
+        return b;
+      })
+    );
+
+    // Reassign affected issues
+    setIssues((prev) =>
+      prev.map((i) =>
+        i.bookCategory === categoryName
+          ? { ...i, bookCategory: fallbackCategory }
+          : i
+      )
+    );
+
+    pushActivity({
+      type: 'category_deleted',
+      title: `Category deleted: "${categoryName}" (${affectedCount} books moved to "${fallbackCategory}")`,
+      description: `Category deleted: ${categoryName}`,
+    });
+    toast.info(
+      `Deleted category "${categoryName}". ${affectedCount} books moved to "${fallbackCategory}".`
+    );
     return { success: true };
   };
 
@@ -1404,6 +1579,8 @@ export function LibraryProvider({ children }) {
         deleteIssueRecord,
         sendOverdueReminder,
         collectFineForIssue,
+        payFine,
+        waiveFine,
         addQuickBook,
         editBook,
         deleteBook,
@@ -1414,6 +1591,9 @@ export function LibraryProvider({ children }) {
         deleteMember,
         getMemberById,
         addQuickCategory,
+        addCategory,
+        editCategory,
+        deleteCategory,
         syncWithApi: () => fetchAndHydrateFromApi(true),
       }}
     >

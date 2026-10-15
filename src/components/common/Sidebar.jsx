@@ -11,6 +11,8 @@ import {
   UserPlus,
   LogOut,
   X,
+  DollarSign,
+  Shapes,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLibrary } from '../../context/LibraryContext';
@@ -56,6 +58,22 @@ export default function Sidebar({ isOpen, onClose }) {
       icon: BookUp,
       badge: metrics?.booksIssued || 0,
       isActive: location.pathname.startsWith('/circulation'),
+    },
+    {
+      id: 'fines',
+      label: 'Fine Management',
+      path: '/fines',
+      icon: DollarSign,
+      badge: metrics?.overdueBooks || 0,
+      isActive: location.pathname.startsWith('/fines'),
+    },
+    {
+      id: 'categories',
+      label: 'Search & Categories',
+      path: '/categories',
+      icon: Shapes,
+      badge: metrics?.totalCategories || 0,
+      isActive: location.pathname.startsWith('/categories'),
     },
     {
       id: 'activities',

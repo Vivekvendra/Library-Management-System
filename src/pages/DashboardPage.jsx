@@ -691,6 +691,14 @@ export default function DashboardPage() {
                     </div>
                   ))}
                 </div>
+                <div className="mt-2 pt-2 border-t border-[#EFE7DD] flex justify-end">
+                  <Link
+                    to="/categories"
+                    className="text-[11px] font-semibold text-[#764B24] hover:underline inline-flex items-center gap-1"
+                  >
+                    Manage Categories <ArrowRight className="w-3 h-3" />
+                  </Link>
+                </div>
               </div>
             </div>
 
@@ -882,10 +890,10 @@ export default function DashboardPage() {
                     </h2>
                   </div>
                   <Link
-                    to="/circulation"
+                    to="/fines"
                     className="text-[11.5px] font-semibold text-[#DC2626] hover:underline inline-flex items-center gap-1 cursor-pointer"
                   >
-                    View All Overdue <ArrowRight className="w-3 h-3" />
+                    Manage Overdue & Fines <ArrowRight className="w-3 h-3" />
                   </Link>
                 </div>
 

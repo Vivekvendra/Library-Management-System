@@ -11,6 +11,8 @@ import BookDetailsPage from './pages/BookDetailsPage';
 import MemberManagementPage from './pages/MemberManagementPage';
 import MemberProfilePage from './pages/MemberProfilePage';
 import CirculationPage from './pages/CirculationPage';
+import FineManagementPage from './pages/FineManagementPage';
+import CategorySearchPage from './pages/CategorySearchPage';
 
 export default function App() {
   return (
@@ -96,6 +98,26 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <CirculationPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Module 6: Protected Fine Calculation & Overdue Management Route */}
+            <Route
+              path="/fines"
+              element={
+                <ProtectedRoute>
+                  <FineManagementPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Module 7: Protected Search & Category Management Route */}
+            <Route
+              path="/categories"
+              element={
+                <ProtectedRoute>
+                  <CategorySearchPage />
                 </ProtectedRoute>
               }
             />
