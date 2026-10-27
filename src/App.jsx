@@ -13,6 +13,7 @@ import MemberProfilePage from './pages/MemberProfilePage';
 import CirculationPage from './pages/CirculationPage';
 import FineManagementPage from './pages/FineManagementPage';
 import CategorySearchPage from './pages/CategorySearchPage';
+import ReportsPage from './pages/ReportsPage';
 
 export default function App() {
   return (
@@ -118,6 +119,16 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <CategorySearchPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Module 8: Protected Operational Reports Route */}
+            <Route
+              path="/reports"
+              element={
+                <ProtectedRoute>
+                  <ReportsPage />
                 </ProtectedRoute>
               }
             />

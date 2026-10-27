@@ -13,6 +13,7 @@ import {
   X,
   DollarSign,
   Shapes,
+  BarChart3,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLibrary } from '../../context/LibraryContext';
@@ -74,6 +75,13 @@ export default function Sidebar({ isOpen, onClose }) {
       icon: Shapes,
       badge: metrics?.totalCategories || 0,
       isActive: location.pathname.startsWith('/categories'),
+    },
+    {
+      id: 'reports',
+      label: 'Reports & Analytics',
+      path: '/reports',
+      icon: BarChart3,
+      isActive: location.pathname.startsWith('/reports'),
     },
     {
       id: 'activities',
